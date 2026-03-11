@@ -1,0 +1,149 @@
+groups:
+  - name: safari_shield_alerts
+    interval: 30s
+    rules:
+      # API Alerts
+      - alert: APIHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "High error rate on API"
+          description: "API error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+          
+      - alert: APIHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High API latency"
+          description: "P95 API latency is {{ $value }}s for the last 5 minutes"
+      
+      # Fraud Detection Alerts
+      - alert: HighFraudRate
+        expr: rate(fraud_detections_total[1h]) / rate(fraud_predictions_total[1h]) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          service: fraud
+        annotations:
+          summary: "Unusually high fraud rate detected"
+          description: "Fraud rate is {{ $value | humanizePercentage }} in the last hour"
+      
+      - alert: LowFraudDetection
+        expr: rate(fraud_detections_total[1h]) < 10
+        for: 1h
+        labels:
+          severity: warning
+          service: fraud
+        annotations:
+          summary: "Low fraud detection count"
+          description: "Only {{ $value }} frauds detected in the last hour"
+      
+      # System Alerts
+      - alert: HighCPUUsage
+        expr: container_cpu_usage_seconds_total > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is at {{ $value | humanizePercentage }}"
+      
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is at {{ $value | humanizePercentage }}"
+      
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10% on {{ $labels.device }}"
+      
+      # Redis Alerts
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} is not responding"
+      
+      - alert: RedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis memory high"
+          description: "Redis memory usage is at {{ $value | humanizePercentage }}"
+      
+      # Database Alerts
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "Database instance is not responding"
+      
+      - alert: PostgresHighConnections
+        expr: pg_stat_database_numbackends > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "High database connections"
+          description: "PostgreSQL has {{ $value }} active connections"
+      
+      - alert: PostgresSlowQueries
+        expr: rate(pg_stat_activity_max_tx_duration{datname!~"template.*"}[1m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Queries taking longer than 10 seconds detected"
+      
+      # Business Alerts
+      - alert: LargeTransactionAlert
+        expr: sum(rate(transaction_amount_sum[5m])) > 1e6
+        for: 5m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Large transaction volume detected"
+          description: "Transaction volume is {{ $value | humanize }} in the last 5 minutes"
+      
+      - alert: UnusualTransactionPattern
+        expr: rate(transactions_by_hour{hour=~"0|1|2|3|4"}[1h]) > rate(transactions_by_hour{hour=~"9|10|11|12"}[1h]) * 0.5
+        for: 30m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Unusual transaction pattern detected"
+          description: "High transaction volume during off-peak hours"

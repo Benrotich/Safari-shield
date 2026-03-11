@@ -1,0 +1,41 @@
+{
+ "transactions": [
+    {
+      "transaction_id": "SAMPLE_001",
+      "customer_id": "CUST001",
+      "amount": 500.00,
+      "transaction_type": "send_money",
+      "sender_msisdn": "254712345678",
+      "receiver_msisdn": "254723456789",
+      "device_id": "DEV_ABC123",
+      "timestamp": "2024-01-15T10:30:00",
+      "location": "Nairobi",
+      "channel": "Mobile_App"
+    },
+    {
+      "transaction_id": "SAMPLE_002",
+      "customer_id": "CUST002",
+      "amount": 25000.00,
+      "transaction_type": "withdraw_cash",
+      "sender_msisdn": "254734567890",
+      "receiver_msisdn": "254745678901",
+      "device_id": "DEV_XYZ789",
+      "timestamp": "2024-01-15T14:45:00",
+      "location": "Mombasa",
+      "agent_id": "AGENT001",
+      "channel": "Agent"
+    },
+    {
+      "transaction_id": "SAMPLE_003",
+      "customer_id": "CUST003",
+      "amount": 95000.00,
+      "transaction_type": "send_money",
+      "sender_msisdn": "254756789012",
+      "receiver_msisdn": "254767890123",
+      "device_id": "NEW_DEVICE_001",
+      "timestamp": "2024-01-15T23:15:00",
+      "location": "Unknown",
+      "channel": "USSD"
+    }
+  ]
+}

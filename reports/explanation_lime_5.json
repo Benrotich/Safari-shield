@@ -1,0 +1,50 @@
+{
+  "instance_id": "instance_5",
+  "model_name": "LGBMClassifier",
+  "timestamp": "2026-02-25T16:41:48.213500",
+  "prediction": 6.993952175390482e-06,
+  "prediction_class": "Legitimate",
+  "confidence": 0.9999930060478246,
+  "lime_features": [
+    {
+      "feature": "-0.20 < amount <= -0.19",
+      "importance": 0.20430453950986574
+    },
+    {
+      "feature": "location_Nairobi <= 0.00",
+      "importance": 0.08822031571670905
+    },
+    {
+      "feature": "transaction_type_withdraw_cash <= 0.00",
+      "importance": 0.06907888895229763
+    },
+    {
+      "feature": "agent_id <= 0.00",
+      "importance": 0.05603555040720781
+    },
+    {
+      "feature": "transaction_type_TransactionType.P <= 0.00",
+      "importance": -0.02995710911582689
+    },
+    {
+      "feature": "location_UNKNOWN <= 0.00",
+      "importance": 0.02895161315506223
+    },
+    {
+      "feature": "-0.78 < time_since_last_tx_seconds <= 0.14",
+      "importance": -0.02695928493170779
+    },
+    {
+      "feature": "transaction_type_TransactionType.D <= 0.00",
+      "importance": -0.026622221356066816
+    },
+    {
+      "feature": "-0.89 < sender_msisdn <= 0.15",
+      "importance": 0.024263695216945543
+    },
+    {
+      "feature": "transaction_type_TransactionType.B <= 0.00",
+      "importance": 0.01841085731408474
+    }
+  ]
+}

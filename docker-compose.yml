@@ -1,0 +1,197 @@
+version: '3.8'
+
+services:
+  # FastAPI application
+  api:
+    build: .
+    image: safari-shield-api:latest
+    container_name: safari-shield-api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MODEL_PATH=/app/models/best_model.pkl
+      - PREPROCESSOR_PATH=/app/models/preprocessing_pipeline.pkl
+      - FEATURES_PATH=/app/models/feature_names.pkl
+      - THRESHOLD_PATH=/app/models/threshold_info.pkl
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - safari-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: safari-shield-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+  # PostgreSQL for audit logging
+  postgres:
+    image: postgres:15-alpine
+    container_name: safari-shield-postgres
+    environment:
+      - POSTGRES_USER=safari
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-safari123}
+      - POSTGRES_DB=fraud_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safari"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+  # Streamlit dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    image: safari-shield-dashboard:latest
+    container_name: safari-shield-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: safari-shield-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: safari-shield-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: safari-shield-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - api
+      - dashboard
+      - grafana
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+  # Celery worker for async tasks
+  worker:
+    build: .
+    image: safari-shield-worker:latest
+    container_name: safari-shield-worker
+    command: celery -A src.worker.tasks worker --loglevel=info
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+  # Flower for Celery monitoring
+  flower:
+    image: mher/flower
+    container_name: safari-shield-flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    depends_on:
+      - redis
+      - worker
+    networks:
+      - safari-network
+    restart: unless-stopped
+
+networks:
+  safari-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:

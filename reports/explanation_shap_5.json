@@ -1,0 +1,285 @@
+{
+  "instance_id": "instance_5",
+  "model_name": "LGBMClassifier",
+  "timestamp": "2026-02-25T16:41:47.646933",
+  "prediction": 6.993952175390482e-06,
+  "prediction_class": "Legitimate",
+  "confidence": 0.9999930060478246,
+  "shap_values": [
+    -1.0581442855371628,
+    0.08823713164486408,
+    0.06226428249337162,
+    -0.034496545815687625,
+    0.02529587561251084,
+    0.024471383072342454,
+    0.013153149133295974,
+    0.014457050397179394,
+    0.0,
+    0.0,
+    4.2881584049343216e-08,
+    -0.008794702458529256,
+    -3.5130367817881917e-07,
+    -0.03937003492904356,
+    0.0016580450532478921,
+    0.026652336012237432,
+    0.0,
+    0.0006257086147751446,
+    0.009016518812363056,
+    -0.0014262253146134934,
+    -0.012513944807671113,
+    0.01817445431743165,
+    0.005451625485678322,
+    -0.01810258466788403,
+    -8.41253854759862e-06,
+    0.13829658272060372,
+    0.049708707750298425,
+    -0.005458405953261925,
+    0.15438775846736347,
+    0.04564522334508997
+  ],
+  "feature_names": [
+    "amount",
+    "sender_msisdn",
+    "receiver_msisdn",
+    "sender_balance_before",
+    "sender_balance_after",
+    "time_since_last_tx_seconds",
+    "transaction_type_TransactionType.A",
+    "transaction_type_TransactionType.B",
+    "transaction_type_TransactionType.D",
+    "transaction_type_TransactionType.L",
+    "transaction_type_TransactionType.P",
+    "transaction_type_TransactionType.S",
+    "transaction_type_TransactionType.W",
+    "transaction_type_withdraw_cash",
+    "location_Eldoret",
+    "location_Kisumu",
+    "location_Mombasa",
+    "location_Nairobi",
+    "location_Nakuru",
+    "location_Thika",
+    "location_UNKNOWN",
+    "channel_Agent",
+    "channel_Mobile_App",
+    "channel_USSD",
+    "channel_Web",
+    "timestamp",
+    "customer_id",
+    "agent_id",
+    "device_id",
+    "sim_serial"
+  ],
+  "base_value": 11.369638145806169,
+  "feature_importance": [
+    {
+      "feature": "amount",
+      "shap_value": -1.0581442855371628,
+      "feature_value": -0.18938286739315616,
+      "impact": "decreases",
+      "magnitude": 1.0581442855371628
+    },
+    {
+      "feature": "device_id",
+      "shap_value": 0.15438775846736347,
+      "feature_value": 141.0,
+      "impact": "increases",
+      "magnitude": 0.15438775846736347
+    },
+    {
+      "feature": "timestamp",
+      "shap_value": 0.13829658272060372,
+      "feature_value": 2317.0,
+      "impact": "increases",
+      "magnitude": 0.13829658272060372
+    },
+    {
+      "feature": "sender_msisdn",
+      "shap_value": 0.08823713164486408,
+      "feature_value": -0.714828337472853,
+      "impact": "increases",
+      "magnitude": 0.08823713164486408
+    },
+    {
+      "feature": "receiver_msisdn",
+      "shap_value": 0.06226428249337162,
+      "feature_value": -0.8067003405447093,
+      "impact": "increases",
+      "magnitude": 0.06226428249337162
+    },
+    {
+      "feature": "customer_id",
+      "shap_value": 0.049708707750298425,
+      "feature_value": 323.0,
+      "impact": "increases",
+      "magnitude": 0.049708707750298425
+    },
+    {
+      "feature": "sim_serial",
+      "shap_value": 0.04564522334508997,
+      "feature_value": 173.0,
+      "impact": "increases",
+      "magnitude": 0.04564522334508997
+    },
+    {
+      "feature": "transaction_type_withdraw_cash",
+      "shap_value": -0.03937003492904356,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.03937003492904356
+    },
+    {
+      "feature": "sender_balance_before",
+      "shap_value": -0.034496545815687625,
+      "feature_value": 0.4066647897408004,
+      "impact": "decreases",
+      "magnitude": 0.034496545815687625
+    },
+    {
+      "feature": "location_Kisumu",
+      "shap_value": 0.026652336012237432,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 0.026652336012237432
+    },
+    {
+      "feature": "sender_balance_after",
+      "shap_value": 0.02529587561251084,
+      "feature_value": 0.4109398348956494,
+      "impact": "increases",
+      "magnitude": 0.02529587561251084
+    },
+    {
+      "feature": "time_since_last_tx_seconds",
+      "shap_value": 0.024471383072342454,
+      "feature_value": -0.6753558064585059,
+      "impact": "increases",
+      "magnitude": 0.024471383072342454
+    },
+    {
+      "feature": "channel_Agent",
+      "shap_value": 0.01817445431743165,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 0.01817445431743165
+    },
+    {
+      "feature": "channel_USSD",
+      "shap_value": -0.01810258466788403,
+      "feature_value": 1.0,
+      "impact": "decreases",
+      "magnitude": 0.01810258466788403
+    },
+    {
+      "feature": "transaction_type_TransactionType.B",
+      "shap_value": 0.014457050397179394,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 0.014457050397179394
+    },
+    {
+      "feature": "transaction_type_TransactionType.A",
+      "shap_value": 0.013153149133295974,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 0.013153149133295974
+    },
+    {
+      "feature": "location_UNKNOWN",
+      "shap_value": -0.012513944807671113,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.012513944807671113
+    },
+    {
+      "feature": "location_Nakuru",
+      "shap_value": 0.009016518812363056,
+      "feature_value": 1.0,
+      "impact": "increases",
+      "magnitude": 0.009016518812363056
+    },
+    {
+      "feature": "transaction_type_TransactionType.S",
+      "shap_value": -0.008794702458529256,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.008794702458529256
+    },
+    {
+      "feature": "agent_id",
+      "shap_value": -0.005458405953261925,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.005458405953261925
+    },
+    {
+      "feature": "channel_Mobile_App",
+      "shap_value": 0.005451625485678322,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 0.005451625485678322
+    },
+    {
+      "feature": "location_Eldoret",
+      "shap_value": 0.0016580450532478921,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 0.0016580450532478921
+    },
+    {
+      "feature": "location_Thika",
+      "shap_value": -0.0014262253146134934,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.0014262253146134934
+    },
+    {
+      "feature": "location_Nairobi",
+      "shap_value": 0.0006257086147751446,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 0.0006257086147751446
+    },
+    {
+      "feature": "channel_Web",
+      "shap_value": -8.41253854759862e-06,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 8.41253854759862e-06
+    },
+    {
+      "feature": "transaction_type_TransactionType.W",
+      "shap_value": -3.5130367817881917e-07,
+      "feature_value": 1.0,
+      "impact": "decreases",
+      "magnitude": 3.5130367817881917e-07
+    },
+    {
+      "feature": "transaction_type_TransactionType.P",
+      "shap_value": 4.2881584049343216e-08,
+      "feature_value": 0.0,
+      "impact": "increases",
+      "magnitude": 4.2881584049343216e-08
+    },
+    {
+      "feature": "transaction_type_TransactionType.D",
+      "shap_value": 0.0,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.0
+    },
+    {
+      "feature": "transaction_type_TransactionType.L",
+      "shap_value": 0.0,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.0
+    },
+    {
+      "feature": "location_Mombasa",
+      "shap_value": 0.0,
+      "feature_value": 0.0,
+      "impact": "decreases",
+      "magnitude": 0.0
+    }
+  ]
+}

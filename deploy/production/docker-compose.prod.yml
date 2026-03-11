@@ -1,0 +1,377 @@
+version: '3.8'
+
+services:
+  # API Service - Load Balanced
+  api:
+    image: ${DOCKER_REGISTRY}/safari-shield-api:${VERSION}
+    build:
+      context: ../../
+      dockerfile: deploy/production/Dockerfile.api
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      rollback_config:
+        parallelism: 0
+        delay: 5s
+    environment:
+      - ENVIRONMENT=production
+      - REDIS_HOST=redis-master
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=fraud_db
+      - MODEL_PATH=/app/models/best_model.pkl
+      - SECRET_KEY=${SECRET_KEY}
+      - LOG_LEVEL=info
+    volumes:
+      - model-data:/app/models
+      - ./logs:/app/logs
+    networks:
+      - safari-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/health:/usr/share/nginx/html/health:ro
+    depends_on:
+      - api
+    networks:
+      - safari-network
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.role == manager]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Master
+  redis-master:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-master-data:/data
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Redis Replicas
+  redis-replica:
+    image: redis:7-alpine
+    command: redis-server --slaveof redis-master 6379 --masterauth ${REDIS_PASSWORD} --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-replica-data:/data
+    depends_on:
+      - redis-master
+    networks:
+      - safari-network
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.role != manager]
+
+  # PostgreSQL with replication
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=fraud_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # PgBouncer for connection pooling
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=fraud_db
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=1000
+      - DEFAULT_POOL_SIZE=50
+    depends_on:
+      - postgres
+    networks:
+      - safari-network
+    deploy:
+      replicas: 2
+
+  # Celery Worker
+  worker:
+    image: ${DOCKER_REGISTRY}/safari-shield-worker:${VERSION}
+    build:
+      context: ../../
+      dockerfile: deploy/production/Dockerfile.worker
+    environment:
+      - REDIS_HOST=redis-master
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=fraud_db
+    volumes:
+      - model-data:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      - redis-master
+      - postgres
+    networks:
+      - safari-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  # Flower for Celery monitoring
+  flower:
+    image: mher/flower:latest
+    command: ["celery", "--broker=redis://:${REDIS_PASSWORD}@redis-master:6379/0", "flower", "--port=5555"]
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis-master
+      - worker
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # Elasticsearch for logs
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # Kibana for log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # Filebeat for log shipping
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    user: root
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./logs:/var/log/safari-shield:ro
+    networks:
+      - safari-network
+    deploy:
+      mode: global
+
+  # Prometheus Alertmanager
+  alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/data
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/data'
+    ports:
+      - "9093:9093"
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # Node Exporter for host metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - safari-network
+    deploy:
+      mode: global
+
+  # CADvisor for container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - safari-network
+    deploy:
+      mode: global
+
+  # Backup service
+  backup:
+    image: postgres:15-alpine
+    volumes:
+      - postgres-data:/data:ro
+      - ./backups:/backups
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=fraud_db
+    entrypoint: |
+      sh -c '
+      while true; do
+        DATE=$$(date +%Y%m%d_%H%M%S)
+        PGPASSWORD=$$POSTGRES_PASSWORD pg_dump -h postgres -U $$POSTGRES_USER $$POSTGRES_DB > /backups/backup_$$DATE.sql
+        gzip /backups/backup_$$DATE.sql
+        find /backups -name "backup_*.sql.gz" -mtime +7 -delete
+        sleep 86400
+      done
+      '
+    depends_on:
+      - postgres
+    networks:
+      - safari-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  safari-network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  model-data:
+    driver: rexray/ebs
+  redis-master-data:
+    driver: rexray/ebs
+  redis-replica-data:
+    driver: rexray/ebs
+  postgres-data:
+    driver: rexray/ebs
+  prometheus-data:
+    driver: rexray/ebs
+  grafana-data:
+    driver: rexray/ebs
+  elasticsearch-data:
+    driver: rexray/ebs
+  alertmanager-data:
+    driver: rexray/ebs
