@@ -1,3 +1,4 @@
+HEAD
 # 🛡️ Safari-Shield: Adaptive Fraud Detection System
 
 An adaptive, explainable, and real-time fraud detection system for M-Pesa transactions.
@@ -21,4 +22,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r requirements.tx
+# Safari-shield
+M-Pesa Fraud Detection System with Explainable AI, Real-Time Adaptation &amp; Advanced Fraud Intelligence
+ d204e007e3cf5b91da228be3f3fa5d05b9493025
